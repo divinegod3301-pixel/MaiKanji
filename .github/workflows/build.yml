@@ -19,7 +19,7 @@ jobs:
         run: |
           set -e
 
-          ZIP_FILE="MAIKANJI_JAPANESE_THEME_FEATURES_BUILDABLE.zip"
+          ZIP_FILE="MAIKANJI_JAPANESE_UI_UPDATED.zip"
 
           echo "Looking for:"
           echo "$ZIP_FILE"
