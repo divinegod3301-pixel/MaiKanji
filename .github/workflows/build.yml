@@ -14,16 +14,19 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Extract MaiKanji source ZIP
+      - name: Extract MaiKanji ZIP
         shell: bash
         run: |
           set -e
 
-          ZIP_FILE="MAIKANJI_JAPANESE_UI_WIDGET_SRS_SOUND_FIX.zip"
+          ZIP_FILE="MAIKANJI_JAPANESE_UI_WIDGET_SRS_SOUND_FIX_BUILDABLE.zip"
 
           echo "Checking ZIP..."
+
           if [ ! -f "$ZIP_FILE" ]; then
-            echo "ERROR: $ZIP_FILE not found!"
+            echo "ERROR: ZIP not found:"
+            echo "$ZIP_FILE"
+            echo ""
             echo "Files in repository:"
             find . -maxdepth 3 -type f | sort
             exit 1
@@ -34,9 +37,11 @@ jobs:
 
           unzip -o "$ZIP_FILE" -d extracted
 
-          echo "ZIP extracted successfully."
+          echo "======================================"
+          echo "ZIP EXTRACTED SUCCESSFULLY"
+          echo "======================================"
 
-      - name: Find Gradle project
+      - name: Locate Android project
         shell: bash
         run: |
           set -e
@@ -46,18 +51,18 @@ jobs:
             -print -quit)
 
           if [ -z "$SETTINGS_FILE" ]; then
-            echo "ERROR: Gradle settings file not found!"
+            echo "ERROR: No Gradle settings file found."
             find extracted -maxdepth 7 -type f | sort
             exit 1
           fi
 
           PROJECT_DIR=$(dirname "$SETTINGS_FILE")
 
-          echo "Gradle project:"
+          echo "Android project:"
           echo "$PROJECT_DIR"
 
           if [ ! -d "$PROJECT_DIR/app" ]; then
-            echo "ERROR: app module not found!"
+            echo "ERROR: app directory not found."
             find "$PROJECT_DIR" -maxdepth 3 -type d | sort
             exit 1
           fi
@@ -96,8 +101,11 @@ jobs:
           echo "BUILDING MAIKANJI"
           echo "======================================"
 
+          echo "Project:"
           pwd
+
           echo ""
+          echo "Starting Gradle..."
 
           if [ -f "./gradlew" ]; then
             ./gradlew :app:assembleDebug --stacktrace
@@ -105,14 +113,14 @@ jobs:
             gradle :app:assembleDebug --stacktrace
           fi
 
-      - name: Verify APK
+      - name: Verify APK exists
         shell: bash
         run: |
           set -e
 
           APK_DIR="${PROJECT_DIR}/app/build/outputs/apk/debug"
 
-          echo "Checking APK..."
+          echo "Checking APK output..."
 
           APK=$(find "$APK_DIR" -type f -name "*.apk" -print -quit)
 
@@ -121,7 +129,8 @@ jobs:
             exit 1
           fi
 
-          echo "APK created:"
+          echo ""
+          echo "APK FOUND:"
           echo "$APK"
 
       - name: Upload MaiKanji APK
