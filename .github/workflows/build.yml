@@ -14,17 +14,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Extract MaiKanji ZIP
+      - name: Extract MaiKanji source ZIP
         shell: bash
         run: |
           set -e
 
-          ZIP_FILE="MAIKANJI_FULL_FEATURES.zip"
+          ZIP_FILE="MAIKANJI_JAPANESE_THEME_FEATURES.zip"
 
           if [ ! -f "$ZIP_FILE" ]; then
             echo "ERROR: $ZIP_FILE not found!"
             echo "Repository files:"
-            find . -maxdepth 2 -type f | sort
+            find . -maxdepth 3 -type f | sort
             exit 1
           fi
 
@@ -34,7 +34,6 @@ jobs:
           unzip -o "$ZIP_FILE" -d extracted
 
           echo "ZIP extracted successfully."
-          find extracted -maxdepth 3 -type f | sort
 
       - name: Find Gradle project
         shell: bash
@@ -46,20 +45,19 @@ jobs:
             -print -quit)
 
           if [ -z "$SETTINGS_FILE" ]; then
-            echo "ERROR: Gradle settings file not found!"
+            echo "ERROR: settings.gradle.kts / settings.gradle not found!"
             find extracted -maxdepth 6 -type f | sort
             exit 1
           fi
 
           PROJECT_DIR=$(dirname "$SETTINGS_FILE")
 
-          echo "Gradle project found at:"
+          echo "Gradle project found:"
           echo "$PROJECT_DIR"
 
           if [ ! -d "$PROJECT_DIR/app" ]; then
             echo "ERROR: app module not found!"
-            echo "Project contents:"
-            find "$PROJECT_DIR" -maxdepth 2 -type f | sort
+            find "$PROJECT_DIR" -maxdepth 3 -type d | sort
             exit 1
           fi
 
@@ -88,8 +86,12 @@ jobs:
           echo "======================================"
           echo "BUILDING MaiKanji"
           echo "======================================"
-          echo "Project:"
+
+          echo "Project directory:"
           pwd
+
+          echo "Project files:"
+          ls -la
 
           gradle :app:assembleDebug --stacktrace
 
