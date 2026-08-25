@@ -1,0 +1,101 @@
+name: MaiKanji APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract MaiKanji ZIP
+        shell: bash
+        run: |
+          set -e
+
+          ZIP_FILE="MAIKANJI_FULL_FEATURES.zip"
+
+          if [ ! -f "$ZIP_FILE" ]; then
+            echo "ERROR: $ZIP_FILE not found!"
+            echo "Repository files:"
+            find . -maxdepth 2 -type f | sort
+            exit 1
+          fi
+
+          rm -rf extracted
+          mkdir -p extracted
+
+          unzip -o "$ZIP_FILE" -d extracted
+
+          echo "ZIP extracted successfully."
+          find extracted -maxdepth 3 -type f | sort
+
+      - name: Find Gradle project
+        shell: bash
+        run: |
+          set -e
+
+          SETTINGS_FILE=$(find extracted -type f \
+            \( -name "settings.gradle.kts" -o -name "settings.gradle" \) \
+            -print -quit)
+
+          if [ -z "$SETTINGS_FILE" ]; then
+            echo "ERROR: Gradle settings file not found!"
+            find extracted -maxdepth 6 -type f | sort
+            exit 1
+          fi
+
+          PROJECT_DIR=$(dirname "$SETTINGS_FILE")
+
+          echo "Gradle project found at:"
+          echo "$PROJECT_DIR"
+
+          if [ ! -d "$PROJECT_DIR/app" ]; then
+            echo "ERROR: app module not found!"
+            echo "Project contents:"
+            find "$PROJECT_DIR" -maxdepth 2 -type f | sort
+            exit 1
+          fi
+
+          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.11.1"
+
+      - name: Build MaiKanji Debug APK
+        shell: bash
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: |
+          set -e
+
+          echo "======================================"
+          echo "BUILDING MaiKanji"
+          echo "======================================"
+          echo "Project:"
+          pwd
+
+          gradle :app:assembleDebug --stacktrace
+
+      - name: Upload MaiKanji APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: MaiKanji-${{ github.run_number }}
+          path: ${{ env.PROJECT_DIR }}/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
